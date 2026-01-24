@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pacman Simples</title>
+  <style>
+    body {
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+
+    canvas {
+      background: black;
+      border: 4px solid #444;
+    }
+
+    #score {
+      position: absolute;
+      top: 20px;
+      font-size: 20px;
+    }
+
+    #controls {
+      margin-top: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #controls button {
+      width: 60px;
+      height: 60px;
+      font-size: 24px;
+      border-radius: 12px;
+      border: none;
+      background: #222;
+      color: white;
+    }
+
+    #controls .middle {
+      display: flex;
+      gap: 10px;
+    }
+
+    #controls button:active {
+      background: #555;
+    }
+  </style>
+</head>
+<body>
+  <div id="score">Moedas: 0</div>
+  <canvas id="game" width="600" height="400"></canvas>
+
+  <div id="controls">
+    <button data-key="ArrowUp">⬆️</button>
+    <div class="middle">
+      <button data-key="ArrowLeft">⬅️</button>
+      <button data-key="ArrowDown">⬇️</button>
+      <button data-key="ArrowRight">➡️</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+
+    const pacmanImgs = {
+      up: new Image(),
+      down: new Image(),
+      left: new Image(),
+      right: new Image()
+    };
+
+    pacmanImgs.up.src = 'pacmanUp.png';
+    pacmanImgs.down.src = 'pacmanDown.png';
+    pacmanImgs.left.src = 'pacmanLeft.png';
+    pacmanImgs.right.src = 'pacmanRight.png';
+
+    let currentPacmanImg = pacmanImgs.right;
+
+    const coinImg = new Image();
+    coinImg.src = 'coin.png'; // PNG da moeda
+
+    const pacman = {
+      x: 50,
+      y: 50,
+      size: 40,
+      speed: 4
+    };
+
+    let coins = [];
+    let score = 0;
+
+    function spawnCoins() {
+      coins = [];
+      for (let row = 0; row < map.length; row++) {
+        for (let col = 0; col < map[row].length; col++) {
+          if (map[row][col] === 0) {
+            coins.push({
+              x: col * tileSize + tileSize / 4,
+              y: row * tileSize + tileSize / 4,
+              size: tileSize / 2
+            });
+          }
+        }
+      }
+    }
+
+    // MAPA DO LABIRINTO (1 = parede, 0 = caminho)
+    let map = [];
+
+    let wallChance = 0.15;
+    
+    function floodFill(map, startR, startC, visited) {
+      const stack = [[startR, startC]];
+      const rows = map.length;
+      const cols = map[0].length;
+
+      while (stack.length) {
+        const [r, c] = stack.pop();
+        if (r < 0 || c < 0 || r >= rows || c >= cols) continue;
+        if (visited[r][c] || map[r][c] === 1) continue;
+
+        visited[r][c] = true;
+        stack.push([r+1,c],[r-1,c],[r,c+1],[r,c-1]);
+      }
+    }
+
+    function isMapPlayable(map) {
+      const rows = map.length;
+      const cols = map[0].length;
+      const visited = Array.from({length: rows}, () => Array(cols).fill(false));
+
+      floodFill(map, 1, 1, visited);
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (map[r][c] === 0 && !visited[r][c]) return false;
+        }
+      }
+      return true;
+    }
+
+    function generateRandomMap(rows = 9, cols = 12) {
+  let attempts = 0;
+  let newMap;
+
+  while (attempts < 100) {
+    attempts++;
+    newMap = [];
+
+    for (let r = 0; r < rows; r++) {
+      const row = [];
+      for (let c = 0; c < cols; c++) {
+        if (r === 0 || c === 0 || r === rows - 1 || c === cols - 1) {
+          row.push(1);
+        } else {
+          row.push(Math.random() < wallChance ? 1 : 0);
+        }
+      }
+      newMap.push(row);
+    }
+
+    newMap[1][1] = 0; // spawn sempre livre
+
+    if (isMapPlayable(newMap)) {
+      return newMap;
+    }
+  }
+
+  // fallback de segurança (mapa simples)
+  console.warn('Mapa complexo demais, usando fallback');
+  wallChance = Math.max(wallChance - 0.02, 0.15);
+  return generateRandomMap(rows, cols);
+}
+
+
+    map = generateRandomMap();
+
+    const tileSize = 50;
+
+    function spawnCoins() {
+      coins = [];
+      for (let row = 0; row < map.length; row++) {
+        for (let col = 0; col < map[row].length; col++) {
+          if (map[row][col] === 0) {
+            coins.push({
+              x: col * tileSize + tileSize / 4,
+              y: row * tileSize + tileSize / 4,
+              size: tileSize / 2
+            });
+          }
+        }
+      }
+    }
+
+    spawnCoins();
+
+    const keys = {};
+    window.addEventListener('keydown', e => keys[e.key] = true);
+    window.addEventListener('keyup', e => keys[e.key] = false);
+
+    // controles touchscreen
+    document.querySelectorAll('#controls button').forEach(btn => {
+      const key = btn.dataset.key;
+
+      btn.addEventListener('touchstart', e => {
+        e.preventDefault();
+        keys[key] = true;
+      });
+
+      btn.addEventListener('touchend', e => {
+        e.preventDefault();
+        keys[key] = false;
+      });
+    });
+
+    function canMove(nx, ny) {
+      const col = Math.floor(nx / tileSize);
+      const row = Math.floor(ny / tileSize);
+      return map[row] && map[row][col] === 0;
+    }
+
+    function movePacman() {
+      let nx = pacman.x;
+      let ny = pacman.y;
+
+      if (keys['ArrowUp']) {
+        ny -= pacman.speed;
+        currentPacmanImg = pacmanImgs.up;
+      }
+      if (keys['ArrowDown']) {
+        ny += pacman.speed;
+        currentPacmanImg = pacmanImgs.down;
+      }
+      if (keys['ArrowLeft']) {
+        nx -= pacman.speed;
+        currentPacmanImg = pacmanImgs.left;
+      }
+      if (keys['ArrowRight']) {
+        nx += pacman.speed;
+        currentPacmanImg = pacmanImgs.right;
+      }
+
+      if (canMove(nx + pacman.size / 2, ny + pacman.size / 2)) {
+        pacman.x = nx;
+        pacman.y = ny;
+      }
+    }
+      if (keys['ArrowDown']) {
+        pacman.y += pacman.speed;
+        currentPacmanImg = pacmanImgs.down;
+      }
+      if (keys['ArrowLeft']) {
+        pacman.x -= pacman.speed;
+        currentPacmanImg = pacmanImgs.left;
+      }
+      if (keys['ArrowRight']) {
+        pacman.x += pacman.speed;
+        currentPacmanImg = pacmanImgs.right;
+      }
+
+      pacman.x = Math.max(0, Math.min(canvas.width - pacman.size, pacman.x));
+      pacman.y = Math.max(0, Math.min(canvas.height - pacman.size, pacman.y));
+    
+
+    function checkCollisions() {
+      coins = coins.filter(coin => {
+        const hit = pacman.x < coin.x + coin.size &&
+                    pacman.x + pacman.size > coin.x &&
+                    pacman.y < coin.y + coin.size &&
+                    pacman.y + pacman.size > coin.y;
+        if (hit) {
+          score++;
+          scoreEl.textContent = 'Moedas: ' + score;
+          return false;
+        }
+        return true;
+      });
+
+      if (coins.length === 0) {
+        wallChance = Math.min(wallChance + 0.01, 0.45); // aumenta dificuldade
+        map = generateRandomMap();
+        pacman.x = tileSize;
+        pacman.y = tileSize;
+        spawnCoins();
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // desenha paredes
+      for (let row = 0; row < map.length; row++) {
+        for (let col = 0; col < map[row].length; col++) {
+          if (map[row][col] === 1) {
+            ctx.fillStyle = '#0033cc';
+            ctx.fillRect(col * tileSize, row * tileSize, tileSize, tileSize);
+          }
+        }
+      }
+
+      // desenha moedas
+      coins.forEach(c => {
+        ctx.drawImage(coinImg, c.x, c.y, c.size, c.size);
+      });
+
+      // desenha pacman
+      ctx.drawImage(currentPacmanImg, pacman.x, pacman.y, pacman.size, pacman.size);
+    }
+
+    function loop() {
+      movePacman();
+      checkCollisions();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+  </script>
+</body>
+</html>
