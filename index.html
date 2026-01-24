@@ -5,6 +5,14 @@
   <title>Pacman Procedural</title>
 
   <style>
+    * {
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      user-select: none;
+      }
+
+
+
     body {
       background: #111;
       margin: 0;
@@ -37,8 +45,8 @@
     }
 
     #controls button {
-      width: 25vw;
-      height: 25vw;
+      width: 15vw;
+      height: 15vw;
       max-width: 90px;
       max-height: 90px;
       font-size: 8vw;
@@ -56,6 +64,11 @@
     #controls button:active {
       background: #555;
     }
+
+    #controls button {
+      touch-action: none;
+    }
+
   </style>
 </head>
 
@@ -87,6 +100,10 @@
 
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
+    
+    if (isLandscape) {
+      document.getElementById('controls').style.display = 'none';
+    }
 
     canvas.width = cols * tileSize;
     canvas.height = rows * tileSize;
@@ -269,4 +286,3 @@
   </script>
 </body>
 </html>
-
