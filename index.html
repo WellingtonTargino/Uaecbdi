@@ -9,9 +9,7 @@
       -webkit-user-select: none;
       -webkit-touch-callout: none;
       user-select: none;
-      }
-
-
+    }
 
     body {
       background: #111;
@@ -45,8 +43,8 @@
     }
 
     #controls button {
-      width: 35vw;
-      height: 35vw;
+      width: 15vw;
+      height: 15vw;
       max-width: 90px;
       max-height: 90px;
       font-size: 8vw;
@@ -54,6 +52,7 @@
       border: none;
       background: #222;
       color: white;
+      touch-action: none;
     }
 
     #controls .middle {
@@ -65,8 +64,30 @@
       background: #555;
     }
 
-    #controls button {
-      touch-action: none;
+    #gameOverOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #ff0000;
+      font-size: 5vw;
+      font-weight: bold;
+      z-index: 1000;
+      text-align: center;
+      visibility: hidden;
+      user-select: none;
+      pointer-events: none;
+    }
+    #gameOverOverlay span {
+      font-size: 3vw;
+      margin-top: 2vh;
+      color: #fff;
     }
 
   </style>
@@ -85,8 +106,13 @@
     </div>
   </div>
 
+  <div id="gameOverOverlay">
+    GAME OVER ☠️
+    <span>Toque ou clique para reiniciar</span>
+  </div>
+
   <script>
-    /* ===== ORIENTAÇÃO E PROPORÇÃO ===== */
+    /* ===== ORIENTAÇÃO ===== */
     const isLandscape = window.innerWidth > window.innerHeight;
     const cols = isLandscape ? 16 : 9;
     const rows = isLandscape ? 9 : 16;
@@ -94,16 +120,12 @@
     const maxWidth = window.innerWidth * 0.95;
     const maxHeight = window.innerHeight * 0.55;
 
-    const tileSize = Math.floor(
-      Math.min(maxWidth / cols, maxHeight / rows)
-    );
+    const tileSize = Math.floor(Math.min(maxWidth / cols, maxHeight / rows));
 
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
-    
-    if (isLandscape) {
-      document.getElementById('controls').style.display = 'none';
-    }
+
+    if (isLandscape) document.getElementById('controls').style.display = 'none';
 
     canvas.width = cols * tileSize;
     canvas.height = rows * tileSize;
@@ -125,10 +147,13 @@
     pacmanImgs.left.src = 'pacmanLeft.png';
     pacmanImgs.right.src = 'pacmanRight.png';
 
-    let currentPacmanImg = pacmanImgs.right;
+    const enemyImg = new Image();
+    enemyImg.src = 'gast.png';
 
     const coinImg = new Image();
     coinImg.src = 'coin.png';
+
+    let currentPacmanImg = pacmanImgs.right;
 
     /* ===== PACMAN ===== */
     const pacman = {
@@ -138,7 +163,15 @@
       speed: tileSize * 0.1
     };
 
-    /* ===== MAPA PROCEDURAL ===== */
+    /* ===== INIMIGO ===== */
+    const enemy = {
+      x: 0,
+      y: 0,
+      size: tileSize * 0.8,
+      speed: tileSize * 0.0034
+    };
+
+    /* ===== MAPA ===== */
     let wallChance = 0.15;
     let map = [];
     let coins = [];
@@ -156,11 +189,9 @@
     function isMapPlayable(map) {
       const visited = Array.from({length: rows}, () => Array(cols).fill(false));
       floodFill(map, 1, 1, visited);
-
-      for (let y = 0; y < rows; y++)
-        for (let x = 0; x < cols; x++)
-          if (map[y][x] === 0 && !visited[y][x]) return false;
-
+      for (let y=0;y<rows;y++)
+        for (let x=0;x<cols;x++)
+          if (map[y][x]===0 && !visited[y][x]) return false;
       return true;
     }
 
@@ -168,122 +199,180 @@
       let attempts = 0;
       while (attempts++ < 100) {
         const newMap = [];
-        for (let y = 0; y < rows; y++) {
-          const row = [];
-          for (let x = 0; x < cols; x++) {
-            if (y === 0 || x === 0 || y === rows-1 || x === cols-1)
-              row.push(1);
-            else
-              row.push(Math.random() < wallChance ? 1 : 0);
+        for (let y=0;y<rows;y++) {
+          const row=[];
+          for (let x=0;x<cols;x++) {
+            if (y===0||x===0||y===rows-1||x===cols-1) row.push(1);
+            else row.push(Math.random()<wallChance?1:0);
           }
           newMap.push(row);
         }
-        newMap[1][1] = 0;
+        newMap[1][1]=0;
         if (isMapPlayable(newMap)) return newMap;
       }
-      wallChance = Math.max(wallChance - 0.02, 0.15);
+      wallChance=Math.max(wallChance-0.02,0.15);
       return generateRandomMap();
     }
 
     function spawnCoins() {
-      coins = [];
-      for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-          if (map[y][x] === 0) {
+      coins=[];
+      for (let y=0;y<rows;y++)
+        for (let x=0;x<cols;x++)
+          if (map[y][x]===0)
             coins.push({
-              x: x * tileSize + tileSize * 0.25,
-              y: y * tileSize + tileSize * 0.25,
-              size: tileSize * 0.5
+              x:x*tileSize+tileSize*0.25,
+              y:y*tileSize+tileSize*0.25,
+              size:tileSize*0.5
             });
-          }
-        }
-      }
+    }
+
+    function spawnEnemyOpposite() {
+      enemy.x = (cols - 2) * tileSize;
+      enemy.y = (rows - 2) * tileSize;
+      enemy.speed = tileSize * 0.003;
     }
 
     map = generateRandomMap();
     spawnCoins();
+    spawnEnemyOpposite();
 
     /* ===== CONTROLES ===== */
     const keys = {};
-    window.addEventListener('keydown', e => keys[e.key] = true);
-    window.addEventListener('keyup', e => keys[e.key] = false);
+    window.addEventListener('keydown', e => keys[e.key]=true);
+    window.addEventListener('keyup', e => keys[e.key]=false);
 
-    document.querySelectorAll('#controls button').forEach(btn => {
-      const key = btn.dataset.key;
-      btn.addEventListener('touchstart', e => { e.preventDefault(); keys[key] = true; });
-      btn.addEventListener('touchend', e => { e.preventDefault(); keys[key] = false; });
+    document.querySelectorAll('#controls button').forEach(btn=>{
+      const key=btn.dataset.key;
+      btn.addEventListener('touchstart',e=>{e.preventDefault();keys[key]=true;});
+      btn.addEventListener('touchend',e=>{e.preventDefault();keys[key]=false;});
     });
 
     function canMove(nx, ny) {
-      const col = Math.floor(nx / tileSize);
-      const row = Math.floor(ny / tileSize);
-      return map[row] && map[row][col] === 0;
+      const col=Math.floor(nx/tileSize);
+      const row=Math.floor(ny/tileSize);
+      return map[row] && map[row][col]===0;
     }
 
     function movePacman() {
-      let nx = pacman.x;
-      let ny = pacman.y;
-
-      if (keys.ArrowUp)    { ny -= pacman.speed; currentPacmanImg = pacmanImgs.up; }
-      if (keys.ArrowDown)  { ny += pacman.speed; currentPacmanImg = pacmanImgs.down; }
-      if (keys.ArrowLeft)  { nx -= pacman.speed; currentPacmanImg = pacmanImgs.left; }
-      if (keys.ArrowRight) { nx += pacman.speed; currentPacmanImg = pacmanImgs.right; }
-
-      if (canMove(nx + pacman.size/2, ny + pacman.size/2)) {
-        pacman.x = nx;
-        pacman.y = ny;
+      let nx=pacman.x, ny=pacman.y;
+      if (keys.ArrowUp)    {ny-=pacman.speed;currentPacmanImg=pacmanImgs.up;}
+      if (keys.ArrowDown)  {ny+=pacman.speed;currentPacmanImg=pacmanImgs.down;}
+      if (keys.ArrowLeft)  {nx-=pacman.speed;currentPacmanImg=pacmanImgs.left;}
+      if (keys.ArrowRight) {nx+=pacman.speed;currentPacmanImg=pacmanImgs.right;}
+      if (canMove(nx+pacman.size/2, ny+pacman.size/2)) {
+        pacman.x=nx; pacman.y=ny;
       }
     }
 
+    function moveEnemy() {
+  const directions = [
+    { x: 0, y: -1 }, // cima
+    { x: 0, y: 1 },  // baixo
+    { x: -1, y: 0 }, // esquerda
+    { x: 1, y: 0 }   // direita
+  ];
+
+  let bestMove = null;
+  let bestDist = Infinity;
+
+  directions.forEach(dir => {
+    const nx = enemy.x + dir.x * enemy.speed;
+    const ny = enemy.y + dir.y * enemy.speed;
+
+    if (!canMove(nx + enemy.size / 2, ny + enemy.size / 2)) return;
+
+    const dx = pacman.x - nx;
+    const dy = pacman.y - ny;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestMove = { x: nx, y: ny };
+    }
+  });
+
+  if (bestMove) {
+    enemy.x = bestMove.x;
+    enemy.y = bestMove.y;
+  }
+}
+
+
+    function checkGameOver() {
+      const hit =
+        pacman.x < enemy.x + enemy.size &&
+        pacman.x + pacman.size > enemy.x &&
+        pacman.y < enemy.y + enemy.size &&
+        pacman.y + pacman.size > enemy.y;
+
+      if (hit) {
+        // mostra overlay
+        const overlay = document.getElementById('gameOverOverlay');
+        overlay.style.visibility = 'visible';
+        overlay.style.pointerEvents = 'auto';
+
+        // pausa o loop
+        cancelAnimationFrame(animationFrameId);
+
+        // clique ou toque reinicia
+        overlay.addEventListener('click', () => location.reload());
+        overlay.addEventListener('touchstart', () => location.reload());
+      }
+    }
+
+
     function checkCollisions() {
-      coins = coins.filter(c => {
-        const hit = pacman.x < c.x + c.size &&
-                    pacman.x + pacman.size > c.x &&
-                    pacman.y < c.y + c.size &&
-                    pacman.y + pacman.size > c.y;
+      coins=coins.filter(c=>{
+        const hit=pacman.x<c.x+c.size &&
+                  pacman.x+pacman.size>c.x &&
+                  pacman.y<c.y+c.size &&
+                  pacman.y+pacman.size>c.y;
         if (hit) {
           score++;
-          scoreEl.textContent = 'Moedas: ' + score;
+          enemy.speed+=tileSize*0.00034;
+          scoreEl.textContent='Moedas: '+score;
           return false;
         }
         return true;
       });
 
       if (!coins.length) {
-        wallChance = Math.min(wallChance + 0.01, 0.45);
-        map = generateRandomMap();
-        pacman.x = tileSize;
-        pacman.y = tileSize;
+        wallChance=Math.min(wallChance+0.01,0.45);
+        map=generateRandomMap();
+        pacman.x=tileSize; pacman.y=tileSize;
         spawnCoins();
+        spawnEnemyOpposite();
       }
     }
 
     function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0,0,canvas.width,canvas.height);
 
-      for (let y = 0; y < rows; y++)
-        for (let x = 0; x < cols; x++)
-          if (map[y][x] === 1) {
-            ctx.fillStyle = '#0033cc';
-            ctx.fillRect(x*tileSize, y*tileSize, tileSize, tileSize);
+      for (let y=0;y<rows;y++)
+        for (let x=0;x<cols;x++)
+          if (map[y][x]===1) {
+            ctx.fillStyle='#0033cc';
+            ctx.fillRect(x*tileSize,y*tileSize,tileSize,tileSize);
           }
 
-      coins.forEach(c =>
-        ctx.drawImage(coinImg, c.x, c.y, c.size, c.size)
-      );
-
-      ctx.drawImage(currentPacmanImg, pacman.x, pacman.y, pacman.size, pacman.size);
+      coins.forEach(c=>ctx.drawImage(coinImg,c.x,c.y,c.size,c.size));
+      ctx.drawImage(enemyImg,enemy.x,enemy.y,enemy.size,enemy.size);
+      ctx.drawImage(currentPacmanImg,pacman.x,pacman.y,pacman.size,pacman.size);
     }
+
+    let animationFrameId;
 
     function loop() {
       movePacman();
+      moveEnemy();
       checkCollisions();
+      checkGameOver();
       draw();
-      requestAnimationFrame(loop);
+      animationFrameId = requestAnimationFrame(loop);
     }
+
 
     loop();
   </script>
 </body>
 </html>
-
