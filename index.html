@@ -193,13 +193,19 @@
     }
 
     function isMapPlayable(map) {
-      const visited = Array.from({length: rows}, () => Array(cols).fill(false));
-      floodFill(map, 1, 1, visited);
-      for (let y=0;y<rows;y++)
-        for (let x=0;x<cols;x++)
-          if (map[y][x]===0 && !visited[y][x]) return false;
-      return true;
-    }
+  const visited = Array.from({length: rows}, () => Array(cols).fill(false));
+
+  // flood fill a partir do player
+  floodFill(map, 1, 1, visited);
+
+  const enemyRow = rows - 2;
+  const enemyCol = cols - 2;
+
+  // verifica se posição do inimigo é alcançável
+  if (!visited[enemyRow][enemyCol]) return false;
+
+  return true;
+}
 
     function generateRandomMap() {
       let attempts = 0;
@@ -233,6 +239,11 @@
     }
 
     function spawnEnemyOpposite() {
+      if (map[rows - 2][cols - 2] === 1) {
+      enemy.x = tileSize;
+      enemy.y = (rows - 2) * tileSize;
+      }
+      
       enemy.x = (cols - 2) * tileSize;
       enemy.y = (rows - 2) * tileSize;
       enemy.speed = tileSize * 0.003;
