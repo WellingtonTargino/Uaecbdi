@@ -122,7 +122,9 @@
     const rows = isLandscape ? 9 : 16;
 
     const maxWidth = window.innerWidth * 0.95;
-    const maxHeight = window.innerHeight * 0.75;
+    const maxHeight = isLandscape
+  ? window.innerHeight * 0.85
+  : window.innerHeight * 0.48; // 👈 menor no mobile
 
     const tileSize = Math.floor(Math.min(maxWidth / cols, maxHeight / rows));
 
