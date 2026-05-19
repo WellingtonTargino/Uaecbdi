@@ -50,11 +50,10 @@ canvas{
 ========================================================= */
 
 const canvas = document.getElementById("game");
-
 const ctx = canvas.getContext("2d");
 const isMobile = window.innerWidth < 768;
 ctx.imageSmoothingEnabled = true;
-
+let audioUnlocked = false;
 function resizeCanvas(){
 
     canvas.width = window.innerWidth;
@@ -110,6 +109,29 @@ const bird = {
     jump:-8.5
 };
 
+async function unlockAudio(){
+
+    if(audioUnlocked) return;
+
+    audioUnlocked = true;
+
+    try{
+
+        await bgMusic.play();
+
+        bgMusic.pause();
+
+        bgMusic.currentTime = 0;
+
+    }catch(err){
+
+        console.log("Audio unlock bloqueado");
+    }
+}
+
+
+
+    
 /* =========================================================
    GAME STATE
 ========================================================= */
@@ -157,7 +179,7 @@ function jump(){
 
         started = true;
 
-        bgMusic.play();
+        bgMusic.play().catch(() => {});
     }
 
     bird.velocity = bird.jump;
@@ -174,8 +196,12 @@ document.addEventListener("keydown", e => {
     }
 });
 
-document.addEventListener("pointerdown", jump);
+document.addEventListener("pointerdown", async () => {
 
+    await unlockAudio();
+
+    jump();
+});
 /* =========================================================
    PIPES
 ========================================================= */
