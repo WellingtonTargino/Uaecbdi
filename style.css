@@ -100,28 +100,6 @@ body {
   margin-bottom: 20px;
 }
 
-#mobileButton {
-  position: absolute;
-
-  bottom: 40px;
-  right: 40px;
-
-  width: 90px;
-  height: 90px;
-
-  border-radius: 50%;
-  border: none;
-
-  font-size: 40px;
-  background: rgba(255,255,255,0.25);
-  color: white;
-
-  backdrop-filter: blur(5px);
-
-  z-index: 300;
-
-  display: none;
-}
 
 /* Detecta touch/mobile */
 @media (pointer: coarse) {
