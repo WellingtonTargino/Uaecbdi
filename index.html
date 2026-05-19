@@ -1,37 +1,696 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Up Uaec nas Alturas</title>
 
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+<title>Up UAEC Altas Aventuras</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+
+    user-select:none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+body{
+    overflow:hidden;
+    background:#000;
+    font-family:Arial, sans-serif;
+}
+
+canvas{
+    display:block;
+
+    width:100vw;
+    height:100vh;
+
+    transform:translateZ(0);
+
+    image-rendering:auto;
+}
+
+</style>
+
 </head>
 <body>
 
-  <div id="game">
+<canvas id="game"></canvas>
 
-    <div id="score">0</div>
+<script>
 
-    <div id="bird"></div>
+/* =========================================================
+   CANVAS
+========================================================= */
 
-    <!-- Tela inicial -->
-    <div id="startScreen">
-      <h1>Up Uaec nas Alturas</h1>
-      <p>Pressione ESPAÇO ou TOQUE para começar</p>
-    </div>
+const canvas = document.getElementById("game");
 
-    <!-- Game Over -->
-    <div id="gameOver">
-      <h1>GAME OVER</h1>
-      <p id="finalScore"></p>
-      <button onclick="restartGame()">Reiniciar</button>
-    </div>
+const ctx = canvas.getContext("2d");
 
-  </div>
-  <audio id="jumpSound" src="jump.mp3"></audio>
-  <audio id="bgMusic" src="###" loop></audio>
+ctx.imageSmoothingEnabled = true;
 
-  <script src="script.js"></script>
+function resizeCanvas(){
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+
+resizeCanvas();
+
+window.addEventListener("resize", resizeCanvas);
+
+/* =========================================================
+   IMAGENS
+========================================================= */
+
+const birdImg = new Image();
+birdImg.src = "bird.png";
+
+const coinImg = new Image();
+coinImg.src = "coin.png";
+
+const bgImg = new Image();
+bgImg.src = "scene.jpg";
+
+/* =========================================================
+   ÁUDIOS
+========================================================= */
+
+const jumpSound = new Audio("jump.mp3");
+
+jumpSound.preload = "auto";
+
+const bgMusic = new Audio("music.mp3");
+
+bgMusic.loop = true;
+bgMusic.volume = 0.35;
+bgMusic.preload = "auto";
+
+/* =========================================================
+   PLAYER
+========================================================= */
+
+const bird = {
+
+    x:120,
+    y:300,
+
+    width:65,
+    height:50,
+
+    velocity:0,
+
+    gravity:0.45,
+    jump:-8.5
+};
+
+/* =========================================================
+   GAME STATE
+========================================================= */
+
+let pipes = [];
+let coins = [];
+
+let score = 0;
+
+let started = false;
+let gameOver = false;
+
+let pipeTimer = 0;
+
+/* =========================================================
+   CORES DOS BALÕES
+========================================================= */
+
+function randomColor(){
+
+    const colors = [
+
+    "#e74c3c",
+    "#3498db",
+    "#f1c40f",
+    "#2ecc71",
+    "#9b59b6"
+
+    ];
+
+    return colors[
+        Math.floor(Math.random() * colors.length)
+    ];
+}
+
+/* =========================================================
+   INPUT
+========================================================= */
+
+function jump(){
+
+    if(gameOver) return;
+
+    if(!started){
+
+        started = true;
+
+        bgMusic.play();
+    }
+
+    bird.velocity = bird.jump;
+
+    jumpSound.currentTime = 0;
+    jumpSound.play();
+}
+
+document.addEventListener("keydown", e => {
+
+    if(e.code === "Space"){
+
+        jump();
+    }
+});
+
+document.addEventListener("pointerdown", jump);
+
+/* =========================================================
+   PIPES
+========================================================= */
+
+function createPipe(){
+
+    const gap = 240;
+
+    const topHeight =
+
+        Math.random() *
+
+        (canvas.height - gap - 200)
+
+        + 60;
+
+    pipes.push({
+
+        x:canvas.width,
+
+        width:95,
+
+        topHeight:topHeight,
+
+        bottomY:topHeight + gap,
+
+        color:randomColor(),
+
+        passed:false
+    });
+
+    /* ==========================
+       MOEDA
+    ========================== */
+
+    coins.push({
+
+        x:canvas.width + 30,
+
+        y:topHeight + gap/2 - 18,
+
+        width:36,
+        height:36,
+
+        collected:false
+    });
+}
+
+/* =========================================================
+   COLISÃO
+========================================================= */
+
+function collision(a,b){
+
+    const marginA = 10;
+    const marginB = 8;
+
+    return (
+
+        a.x + marginA < b.x + b.width - marginB &&
+        a.x + a.width - marginA > b.x + marginB &&
+        a.y + marginA < b.y + b.height - marginB &&
+        a.y + a.height - marginA > b.y + marginB
+    );
+}
+
+/* =========================================================
+   UPDATE
+========================================================= */
+
+function update(){
+
+    if(gameOver) return;
+
+    if(started){
+
+        /* ==========================
+           PLAYER
+        ========================== */
+
+        bird.velocity += bird.gravity;
+
+        bird.y += bird.velocity;
+
+        /* ==========================
+           GERADOR
+        ========================== */
+
+        pipeTimer++;
+
+        if(pipeTimer > 140){
+
+            createPipe();
+
+            pipeTimer = 0;
+        }
+
+        /* ==========================
+           PIPES
+        ========================== */
+
+        for(let i = pipes.length - 1; i >= 0; i--){
+
+            const pipe = pipes[i];
+
+            pipe.x -= 2.4;
+
+            /* SCORE */
+
+            if(!pipe.passed && pipe.x < bird.x){
+
+                pipe.passed = true;
+            }
+
+            /* TOP COLLISION */
+
+            if(collision(
+
+                bird,
+
+                {
+                    x:pipe.x,
+                    y:0,
+
+                    width:pipe.width,
+                    height:pipe.topHeight
+                }
+
+            )){
+                endGame();
+            }
+
+            /* BOTTOM COLLISION */
+
+            if(collision(
+
+                bird,
+
+                {
+                    x:pipe.x,
+                    y:pipe.bottomY,
+
+                    width:pipe.width,
+                    height:canvas.height - pipe.bottomY
+                }
+
+            )){
+                endGame();
+            }
+
+            /* REMOVE */
+
+            if(pipe.x + pipe.width < -100){
+
+                pipes.splice(i,1);
+            }
+        }
+
+        /* ==========================
+           COINS
+        ========================== */
+
+        for(let i = coins.length - 1; i >= 0; i--){
+
+            const coin = coins[i];
+
+            coin.x -= 2.4;
+
+            if(
+
+                !coin.collected &&
+
+                collision(bird, coin)
+
+            ){
+
+                coin.collected = true;
+
+                score++;
+            }
+
+            if(coin.x < -100){
+
+                coins.splice(i,1);
+            }
+        }
+
+        /* ==========================
+           CHÃO/TETO
+        ========================== */
+
+        if(
+
+            bird.y < 0 ||
+
+            bird.y + bird.height > canvas.height
+
+        ){
+            endGame();
+        }
+    }
+}
+
+/* =========================================================
+   DRAW
+========================================================= */
+
+function draw(){
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    /* =====================================================
+       BACKGROUND
+    ===================================================== */
+
+    ctx.drawImage(
+
+        bgImg,
+
+        0,
+        0,
+
+        canvas.width,
+        canvas.height
+    );
+
+    /* =====================================================
+       BALÕES
+    ===================================================== */
+
+    pipes.forEach(pipe => {
+
+        /* ==========================
+           SOMBRA
+        ========================== */
+        ctx.shadowColor = "rgba(0,0,0,0.15)";
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetY = 3;
+
+        /* ==========================
+           GRADIENTE
+        ========================== */
+
+        const gradient = ctx.createLinearGradient(
+
+            pipe.x,
+            0,
+
+            pipe.x + pipe.width,
+            0
+        );
+
+        gradient.addColorStop(0.5, pipe.color);
+        gradient.addColorStop(1, pipe.color);
+
+        ctx.fillStyle = gradient;
+
+        /* ==========================
+           TOP
+        ========================== */
+
+        ctx.beginPath();
+
+        ctx.roundRect(
+
+            pipe.x,
+            0,
+
+            pipe.width,
+            pipe.topHeight,
+
+            45
+        );
+
+        ctx.fill();
+
+        /* ==========================
+           BOTTOM
+        ========================== */
+
+        ctx.beginPath();
+
+        ctx.roundRect(
+
+            pipe.x,
+            pipe.bottomY,
+
+            pipe.width,
+            canvas.height - pipe.bottomY,
+
+            45
+        );
+
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+    });
+
+    /* =====================================================
+       MOEDAS
+    ===================================================== */
+
+    coins.forEach(coin => {
+
+        if(!coin.collected){
+
+
+            ctx.drawImage(
+
+                coinImg,
+
+                coin.x,
+                coin.y,
+
+                coin.width,
+                coin.height
+            );
+
+        }
+    });
+
+    /* =====================================================
+       PÁSSARO
+    ===================================================== */
+
+    ctx.save();
+
+    ctx.translate(
+
+        bird.x + bird.width/2,
+        bird.y + bird.height/2
+    );
+
+    ctx.rotate(bird.velocity * 0.05);
+
+
+    ctx.drawImage(
+
+        birdImg,
+
+        -bird.width/2,
+        -bird.height/2,
+
+        bird.width,
+        bird.height
+    );
+
+
+    ctx.restore();
+
+    /* =====================================================
+       SCORE
+    ===================================================== */
+
+    ctx.fillStyle = "#fff";
+
+    ctx.font = "bold 52px Arial";
+
+    ctx.textAlign = "left";
+
+    ctx.fillText(score, 30, 70);
+
+    /* =====================================================
+       START SCREEN
+    ===================================================== */
+
+    if(!started){
+
+        ctx.fillStyle = "rgba(0,0,0,0.45)";
+
+        ctx.fillRect(
+
+            0,
+            0,
+
+            canvas.width,
+            canvas.height
+        );
+
+        ctx.fillStyle = "#fff";
+
+        ctx.textAlign = "center";
+
+        ctx.font = "bold 60px Arial";
+
+        ctx.fillText(
+
+            "Up UAEC Altas Aventura",
+
+            canvas.width / 2,
+            canvas.height / 2 - 50
+        );
+
+        ctx.font = "28px Arial";
+
+        ctx.fillText(
+
+            "Toque na tela ou pressione ESPAÇO",
+
+            canvas.width / 2,
+            canvas.height / 2 + 30
+        );
+    }
+
+    /* =====================================================
+       GAME OVER
+    ===================================================== */
+
+    if(gameOver){
+
+        ctx.fillStyle = "rgba(0,0,0,0.55)";
+
+        ctx.fillRect(
+
+            0,
+            0,
+
+            canvas.width,
+            canvas.height
+        );
+
+        ctx.fillStyle = "#fff";
+
+        ctx.textAlign = "center";
+
+        ctx.font = "bold 64px Arial";
+
+        ctx.fillText(
+
+            "GAME OVER",
+
+            canvas.width / 2,
+            canvas.height / 2 - 50
+        );
+
+        ctx.font = "36px Arial";
+
+        ctx.fillText(
+
+            "Pontuação: " + score,
+
+            canvas.width / 2,
+            canvas.height / 2 + 20
+        );
+
+        ctx.font = "24px Arial";
+
+        ctx.fillText(
+
+            "Toque para reiniciar",
+
+            canvas.width / 2,
+            canvas.height / 2 + 90
+        );
+    }
+}
+
+/* =========================================================
+   LOOP
+========================================================= */
+
+function loop(){
+
+    update();
+
+    draw();
+
+    requestAnimationFrame(loop);
+}
+
+loop();
+
+/* =========================================================
+   GAME OVER
+========================================================= */
+
+function endGame(){
+
+    gameOver = true;
+
+    bgMusic.pause();
+
+    setTimeout(() => {
+
+        document.addEventListener(
+
+            "pointerdown",
+
+            restartOnce
+        );
+
+        document.addEventListener(
+
+            "keydown",
+
+            restartKey
+        );
+
+    },300);
+}
+
+function restartOnce(){
+
+    location.reload();
+}
+
+function restartKey(e){
+
+    if(e.code === "Space"){
+
+        location.reload();
+    }
+}
+
+</script>
+
 </body>
 </html>
