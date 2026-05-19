@@ -52,7 +52,7 @@ canvas{
 const canvas = document.getElementById("game");
 
 const ctx = canvas.getContext("2d");
-
+const isMobile = window.innerWidth < 768;
 ctx.imageSmoothingEnabled = true;
 
 function resizeCanvas(){
@@ -101,8 +101,8 @@ const bird = {
     x:120,
     y:300,
 
-    width:65,
-    height:50,
+    width:isMobile ? 50 : 70,
+    height:isMobile ? 38 : 54,
 
     velocity:0,
 
@@ -382,7 +382,49 @@ function update(){
 /* =========================================================
    DRAW
 ========================================================= */
+function drawBackgroundCover(img){
 
+    const imgRatio = img.width / img.height;
+
+    const canvasRatio =
+        canvas.width / canvas.height;
+
+    let drawWidth;
+    let drawHeight;
+
+    let x;
+    let y;
+
+    if(imgRatio > canvasRatio){
+
+        drawHeight = canvas.height;
+
+        drawWidth = drawHeight * imgRatio;
+
+        x = (canvas.width - drawWidth) / 2;
+
+        y = 0;
+
+    }else{
+
+        drawWidth = canvas.width;
+
+        drawHeight = drawWidth / imgRatio;
+
+        x = 0;
+
+        y = (canvas.height - drawHeight) / 2;
+    }
+
+    ctx.drawImage(
+        img,
+        x,
+        y,
+        drawWidth,
+        drawHeight
+    );
+}
+    
 function draw(){
 
     ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -391,16 +433,7 @@ function draw(){
        BACKGROUND
     ===================================================== */
 
-    ctx.drawImage(
-
-        bgImg,
-
-        0,
-        0,
-
-        canvas.width,
-        canvas.height
-    );
+    drawBackgroundCover(bgImg);
 
     /* =====================================================
        BALÕES
@@ -532,7 +565,9 @@ function draw(){
 
     ctx.fillStyle = "#fff";
 
-    ctx.font = "bold 52px Arial";
+    ctx.font = isMobile
+        ? "bold 34px Arial"
+        : "bold 52px Arial";
 
     ctx.textAlign = "left";
 
@@ -559,7 +594,9 @@ function draw(){
 
         ctx.textAlign = "center";
 
-        ctx.font = "bold 60px Arial";
+        ctx.font = isMobile
+            ? "bold 38px Arial"
+            : "bold 60px Arial";
 
         ctx.fillText(
 
@@ -569,7 +606,9 @@ function draw(){
             canvas.height / 2 - 50
         );
 
-        ctx.font = "28px Arial";
+        ctx.font = isMobile
+            ? "20px Arial"
+            : "28px Arial";
 
         ctx.fillText(
 
@@ -601,7 +640,9 @@ function draw(){
 
         ctx.textAlign = "center";
 
-        ctx.font = "bold 64px Arial";
+        ctx.font = isMobile
+            ? "bold 42px Arial"
+            : "bold 64px Arial";
 
         ctx.fillText(
 
@@ -611,7 +652,9 @@ function draw(){
             canvas.height / 2 - 50
         );
 
-        ctx.font = "36px Arial";
+        ctx.font = isMobile
+            ? "24px Arial"
+            : "36px Arial";
 
         ctx.fillText(
 
@@ -621,7 +664,9 @@ function draw(){
             canvas.height / 2 + 20
         );
 
-        ctx.font = "24px Arial";
+        ctx.font = isMobile
+            ? "18px Arial"
+            : "24px Arial";
 
         ctx.fillText(
 
