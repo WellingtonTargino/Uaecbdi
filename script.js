@@ -8,7 +8,6 @@ const startScreen = document.getElementById("startScreen");
 const gameOverScreen = document.getElementById("gameOver");
 const finalScore = document.getElementById("finalScore");
 
-const mobileButton = document.getElementById("mobileButton");
 
 let birdY = 300;
 let velocity = 0;
